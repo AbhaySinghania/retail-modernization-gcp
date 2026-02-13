@@ -1,19 +1,11 @@
 from fastapi import FastAPI, Header, HTTPException
-from pydantic import BaseModel
-from typing import Optional, List, Dict
-from uuid import uuid4
-from datetime import datetime, timezone
+from typing import Optional
+
+from app.models import OrderCreate
+from app.repositories.orders_repo import InMemoryOrdersRepo
 
 app = FastAPI()
-
-# In-memory store for now (DB comes later)
-ORDERS: List[dict] = []
-IDEMPOTENCY_MAP: Dict[str, dict] = {}
-
-class OrderCreate(BaseModel):
-    user_id: str
-    amount: float
-    currency: str = "EUR"
+repo = InMemoryOrdersRepo()
 
 @app.get("/health")
 def health():
@@ -24,29 +16,17 @@ def create_order(
     payload: OrderCreate,
     idempotency_key: Optional[str] = Header(default=None, convert_underscores=False, alias="Idempotency-Key"),
 ):
-    # Idempotency is required for reliability story
     if not idempotency_key:
         raise HTTPException(status_code=400, detail="Missing Idempotency-Key header")
 
-    # If request is retried with same key, return the same order
-    if idempotency_key in IDEMPOTENCY_MAP:
-        return {"result": "duplicate_request_returned_existing", "order": IDEMPOTENCY_MAP[idempotency_key]}
+    existing = repo.get_by_idempotency_key(idempotency_key)
+    if existing:
+        return {"result": "duplicate_request_returned_existing", "order": existing}
 
-    order = {
-        "order_id": str(uuid4()),
-        "user_id": payload.user_id,
-        "amount": payload.amount,
-        "currency": payload.currency,
-        "status": "created",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "idempotency_key": idempotency_key,
-    }
-    ORDERS.append(order)
-    IDEMPOTENCY_MAP[idempotency_key] = order
-
+    order = repo.create_order(payload, idempotency_key)
     return {"result": "created", "order": order}
 
 @app.get("/orders")
 def list_orders(limit: int = 20):
-    # newest first
-    return {"count": min(limit, len(ORDERS)), "orders": list(reversed(ORDERS))[:limit]}
+    orders = repo.list_orders(limit=limit)
+    return {"count": len(orders), "orders": orders}
