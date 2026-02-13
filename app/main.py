@@ -5,7 +5,18 @@ from app.models import OrderCreate
 from app.repositories.orders_repo import InMemoryOrdersRepo
 
 app = FastAPI()
-repo = InMemoryOrdersRepo()
+
+from app.config import get_repo_type
+
+repo_type = get_repo_type()
+
+if repo_type == "postgres":
+    # Only works when DB env vars exist
+    from app.repositories.postgres_orders_repo import PostgresOrdersRepo
+    repo = PostgresOrdersRepo()
+else:
+    repo = InMemoryOrdersRepo()
+
 
 @app.get("/health")
 def health():

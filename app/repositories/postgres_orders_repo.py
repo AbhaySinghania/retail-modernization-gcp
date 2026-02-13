@@ -7,7 +7,7 @@ from app.models import OrderCreate, make_order
 class PostgresOrdersRepo:
     def __init__(self):
         self.conn = psycopg2.connect(
-            host=os.getenv("DB_HOST"),
+            host=os.getenv("DB_HOST"),      
             database=os.getenv("DB_NAME"),
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
