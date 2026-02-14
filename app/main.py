@@ -1,5 +1,8 @@
 from fastapi import FastAPI, Header, HTTPException
 from typing import Optional
+import os
+import socket
+
 
 from app.models import OrderCreate
 from app.repositories.orders_repo import InMemoryOrdersRepo
@@ -41,3 +44,13 @@ def create_order(
 def list_orders(limit: int = 20):
     orders = repo.list_orders(limit=limit)
     return {"count": len(orders), "orders": orders}
+
+@app.get("/whoami")
+def whoami():
+    return {
+        "service": os.getenv("K_SERVICE"),
+        "revision": os.getenv("K_REVISION"),
+        "region": os.getenv("REGION"),  # we will set this env var per-region in Cloud Run
+        "hostname": socket.gethostname(),
+    }
+
