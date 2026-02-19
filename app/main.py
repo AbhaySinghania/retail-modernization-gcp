@@ -13,8 +13,7 @@ from app.config import get_repo_type
 
 repo_type = get_repo_type()
 
-if repo_type == "postgres":
-    # Only works when DB env vars exist
+if repo_type in ("postgres", "cloudsql"):
     from app.repositories.postgres_orders_repo import PostgresOrdersRepo
     repo = PostgresOrdersRepo()
 else:
@@ -50,7 +49,7 @@ def whoami():
     return {
         "service": os.getenv("K_SERVICE"),
         "revision": os.getenv("K_REVISION"),
-        "region": os.getenv("REGION"),  # we will set this env var per-region in Cloud Run
+        "region": os.getenv("REGION"),
         "hostname": socket.gethostname(),
     }
 
